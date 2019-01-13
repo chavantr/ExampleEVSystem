@@ -57,6 +57,28 @@ class MainActivity : AppCompatActivity(),
 
         var frame = activity_place_map as SupportMapFragment
         frame.getMapAsync(this)
+
+        imgForwad.setOnClickListener {
+
+        }
+
+        imgForwadRound.setOnClickListener {
+
+        }
+
+        imgLeft.setOnClickListener {
+
+        }
+
+        imgLeftRound.setOnClickListener {
+
+        }
+        imgRight.setOnClickListener {
+
+        }
+        imgRightRound.setOnClickListener {
+
+        }
     }
 
 
