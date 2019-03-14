@@ -17,7 +17,7 @@ class UpdateRouteAsync : AsyncTask<JSONObject, Void, String>() {
 
     override fun onPostExecute(result: String?) {
         super.onPostExecute(result)
-        onUpdateRouteListener.onUpdate(result!!)
+        onUpdateRouteListener.onUpdateRoute(result!!)
     }
 
     fun setOnUpdateRouteListener(onUpdateRouteListener: OnUpdateRouteListener, request: JSONObject) {

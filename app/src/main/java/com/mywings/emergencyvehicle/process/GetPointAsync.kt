@@ -9,9 +9,9 @@ class GetPointAsync : AsyncTask<Void, Void, JSONArray>() {
 
     private val httpConnectionUtil = HttpConnectionUtil()
 
-    override fun doInBackground(vararg p0: Void?): JSONArray {
+    override fun doInBackground(vararg p0: Void?): JSONArray? {
 
-        val response = httpConnectionUtil.requestGet("")
+        val response = httpConnectionUtil.requestGet(EmerConstants.URL + EmerConstants.GET_POINTS)
 
         return JSONArray(response)
 

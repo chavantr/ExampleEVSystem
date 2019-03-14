@@ -27,6 +27,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import com.mywings.emergencyvehicle.models.SignalPoints
 import com.mywings.emergencyvehicle.process.*
 import kotlinx.android.synthetic.main.activity_main.*
 import org.json.JSONArray
@@ -48,7 +49,7 @@ class MainActivity : AppCompatActivity(),
     private lateinit var cPosition: Marker
     private lateinit var marker: Marker
     private lateinit var circle: Circle
-    private lateinit var progressDialog: ProgressDialog
+    private lateinit var progressDialogUtil: ProgressDialogUtil
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +58,8 @@ class MainActivity : AppCompatActivity(),
 
         var frame = activity_place_map as SupportMapFragment
         frame.getMapAsync(this)
+
+        progressDialogUtil = ProgressDialogUtil(this)
 
         imgForwad.setOnClickListener {
 
@@ -123,12 +126,13 @@ class MainActivity : AppCompatActivity(),
                 .strokeWidth(2f)
         )
 
-        val icon = BitmapDescriptorFactory.fromResource(R.mipmap.ic_launcher)
+        val icon = BitmapDescriptorFactory.fromResource(R.drawable.icon)
 
-        marker = mMap!!.addMarker(MarkerOptions().position(latLng).icon(icon))
+        marker = mMap!!.addMarker(MarkerOptions().position(latLng).icon(icon).title("Ambulance location"))
         val cameraPos = CameraPosition.Builder().tilt(60f).target(latLng).zoom(20f).build()
         mMap!!.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPos), 1000, null)
 
+        init()
 
     }
 
@@ -154,13 +158,15 @@ class MainActivity : AppCompatActivity(),
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult?) {
             locationResult ?: return
-            if (null != marker) marker.remove()
-            if (null != circle) circle.remove()
-            latLng = LatLng(locationResult.locations[0].latitude, locationResult.locations[0].longitude)
-            val icon = BitmapDescriptorFactory.fromResource(R.mipmap.ic_launcher)
-            marker = mMap!!.addMarker(MarkerOptions().position(latLng).icon(icon))
-            val cameraPos = CameraPosition.Builder().tilt(60f).target(latLng).zoom(20f).build()
-            mMap!!.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPos), 1000, null)
+            if (locationResult.locations[0].speed > 5) {
+                if (null != marker) marker.remove()
+                if (null != circle) circle.remove()
+                latLng = LatLng(locationResult.locations[0].latitude, locationResult.locations[0].longitude)
+                val icon = BitmapDescriptorFactory.fromResource(R.drawable.icon)
+                marker = mMap!!.addMarker(MarkerOptions().position(latLng).icon(icon).title("Ambulance location"))
+                val cameraPos = CameraPosition.Builder().tilt(60f).target(latLng).zoom(20f).build()
+                mMap!!.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPos), 1000, null)
+            }
         }
     }
 
@@ -205,7 +211,23 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onPoints(result: JSONArray) {
-
+        progressDialogUtil.hide()
+        if (result.length() > 0) {
+            var lst = ArrayList<SignalPoints>()
+            for (i in 0..(result.length() - 1)) {
+                val jNode = result.getJSONObject(i)
+                if (null != jNode) {
+                    var node = SignalPoints()
+                    node.id = jNode.getInt("Id")
+                    node.name = jNode.getString("Name")
+                    node.lat = jNode.getString("Lat")
+                    node.lng = jNode.getString("Lng")
+                    lst.add(node)
+                    mMap!!.addMarker(MarkerOptions().position(LatLng(node.lat.toDouble(), node.lng.toDouble()))).title =
+                        "${node.name}"
+                }
+            }
+        }
     }
 
     override fun onUpdateLight(result: String) {
@@ -242,6 +264,12 @@ class MainActivity : AppCompatActivity(),
         jRequest.put("request", param)
         val updateRoute = UpdateRouteAsync()
         updateRoute.setOnUpdateRouteListener(this, jRequest)
+    }
+
+    private fun init() {
+        progressDialogUtil.show()
+        val getPointAsync = GetPointAsync()
+        getPointAsync.setOnPointListener(this)
     }
 
 }

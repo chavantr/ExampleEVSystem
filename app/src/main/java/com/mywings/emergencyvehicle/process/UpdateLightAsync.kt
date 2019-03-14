@@ -14,7 +14,7 @@ class UpdateLightAsync : AsyncTask<JSONObject, Void, String>() {
 
     override fun onPostExecute(result: String?) {
         super.onPostExecute(result)
-        onUpdateLightListener.onUpdate(result!!)
+        onUpdateLightListener.onUpdateLight(result!!)
     }
 
     fun setOnUpdateLightListener(onUpdateLightListener: OnUpdateLightListener, request: JSONObject) {
