@@ -9,7 +9,11 @@ class UpdateLightAsync : AsyncTask<JSONObject, Void, String>() {
     private lateinit var onUpdateLightListener: OnUpdateLightListener
 
     override fun doInBackground(vararg params: JSONObject?): String {
-        return httpConnectionUtil.requestPost("", params[0])
+        return httpConnectionUtil.requestGet(
+            EmerConstants.URL + EmerConstants.UPDATE_LIGHT + "?light=${params[0]!!.getInt(
+                "light"
+            )}&id=${params[0]!!.getInt("id")}"
+        )
     }
 
     override fun onPostExecute(result: String?) {

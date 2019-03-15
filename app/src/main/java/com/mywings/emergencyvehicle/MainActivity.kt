@@ -3,8 +3,6 @@ package com.mywings.emergencyvehicle
 import android.Manifest
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
-import android.app.Activity
-import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -14,12 +12,12 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.AsyncTask
 import android.os.Build
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Looper
 import android.support.annotation.RequiresApi
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -48,7 +46,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.HashMap
+import java.util.*
 
 
 class MainActivity : AppCompatActivity(),
@@ -62,6 +60,7 @@ class MainActivity : AppCompatActivity(),
     private var mGoogleApiClient: GoogleApiClient? = null
     private var mLocationRequest: LocationRequest? = null
     private var latLng: LatLng = LatLng(18.515665, 73.924090)
+    private lateinit var latLngH: LatLng
     private var locationManager: LocationManager? = null
     private lateinit var cPosition: Marker
     private lateinit var marker: Marker
@@ -77,6 +76,10 @@ class MainActivity : AppCompatActivity(),
     private var srctlat: Double = 0.0
     private var srclng: Double = 0.0
 
+    private var flag: Boolean = false
+
+    private lateinit var timer: Timer
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,26 +90,58 @@ class MainActivity : AppCompatActivity(),
 
         progressDialogUtil = ProgressDialogUtil(this)
 
+        timer = Timer()
+
         imgForwad.setOnClickListener {
+
+            if (flag) {
+                initUpdateRoute(5)
+            } else {
+                Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
+            }
 
         }
 
         imgForwadRound.setOnClickListener {
-
+            if (flag) {
+                initUpdateLight(2)
+            } else {
+                Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
+            }
         }
 
         imgLeft.setOnClickListener {
-
+            if (flag) {
+                initUpdateRoute(4)
+            } else {
+                Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
+            }
         }
 
         imgLeftRound.setOnClickListener {
+            if (flag) {
 
+                initUpdateLight(1)
+
+
+            } else {
+                Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
+            }
         }
         imgRight.setOnClickListener {
-
+            if (flag) {
+                initUpdateRoute(6)
+            } else {
+                Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
+            }
         }
-        imgRightRound.setOnClickListener {
 
+        imgRightRound.setOnClickListener {
+            if (flag) {
+                initUpdateLight(3)
+            } else {
+                Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
+            }
         }
 
         jsonUtil = JsonUtil()
@@ -280,11 +315,11 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onUpdateLight(result: String) {
-
+        progressDialogUtil.hide()
     }
 
     override fun onUpdateRoute(result: String) {
-
+        progressDialogUtil.hide()
     }
 
     override fun onLocationUpdateSuccess(result: String) {
@@ -294,10 +329,8 @@ class MainActivity : AppCompatActivity(),
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (resultCode == RESULT_OK) {
             if (requestCode == 1001) {
-
                 nsource = "Ambulance location"
                 ndest = UserInfoHolder.getInstance().hospital.name
-
                 val str = getDirectionsUrl(
                     latLng,
                     LatLng(
@@ -307,30 +340,84 @@ class MainActivity : AppCompatActivity(),
                 )
                 val downloadTask = DownloadTask()
                 downloadTask.execute(str)
+
+                latLngH = LatLng(
+                    UserInfoHolder.getInstance().hospital.lat.toDouble(),
+                    UserInfoHolder.getInstance().hospital.lng.toDouble()
+                )
+
+                flag = true
+
+                timer.schedule(CheckDistance(), 10000, 1000 * 60)
+
+
             }
         }
     }
 
+    private fun check() {
+        if (UserInfoHolder.getInstance().signalPoints.isNotEmpty()) {
+            for (i in UserInfoHolder.getInstance().signalPoints.indices) {
+                if (UserInfoHolder.getInstance().signalPoints[i].hid == UserInfoHolder.getInstance().hospital.id) {
+                    var locationF = Location("Ambulance location")
+                    locationF.latitude = latLng.latitude
+                    locationF.longitude = latLng.longitude
+                    var locationFF = Location("Signal location")
+                    locationFF.latitude = UserInfoHolder.getInstance().signalPoints[i].lat.toDouble()
+                    locationFF.longitude = UserInfoHolder.getInstance().signalPoints[i].lng.toDouble()
+                    if ((locationF.distanceTo(locationFF) / 1000) <= 1) {
+                        val updateStatus = UpdateStatus()
+                        updateStatus.executeOnExecutor(
+                            AsyncTask.THREAD_POOL_EXECUTOR,
+                            UserInfoHolder.getInstance().signalPoints[i]!!.id
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun getId(): Int {
+        if (UserInfoHolder.getInstance().signalPoints.isNotEmpty()) {
+            for (i in UserInfoHolder.getInstance().signalPoints.indices) {
+                if (UserInfoHolder.getInstance().signalPoints[i].hid == UserInfoHolder.getInstance().hospital.id) {
+                    return UserInfoHolder.getInstance().signalPoints[i].id
+                }
+            }
+        }
+        return 0
+    }
+
+
+    inner class CheckDistance : TimerTask() {
+        override fun run() {
+            check()
+        }
+    }
+
+
     private fun initUpdateLocation() {
         val updateLocation = UpdateLocationAsync()
         var jRequest = JSONObject()
-        var param = JSONObject()
-        jRequest.put("request", param)
+
         updateLocation.setOnUpdateLocationListener(this, jRequest)
     }
 
-    private fun initUpdateLight() {
+    private fun initUpdateLight(light: Int?) {
+        progressDialogUtil.show()
         var jRequest = JSONObject()
-        var param = JSONObject()
-        jRequest.put("request", param)
+        jRequest.put("light", light)
+        jRequest.put("id", getId())
         val updateLight = UpdateLightAsync()
         updateLight.setOnUpdateLightListener(this, jRequest)
     }
 
-    private fun initUpdateRoute() {
+    private fun initUpdateRoute(direction: Int?) {
+        progressDialogUtil.show()
         var jRequest = JSONObject()
-        var param = JSONObject()
-        jRequest.put("request", param)
+        jRequest.put("direction", direction)
+        jRequest.put("id", getId())
         val updateRoute = UpdateRouteAsync()
         updateRoute.setOnUpdateRouteListener(this, jRequest)
     }

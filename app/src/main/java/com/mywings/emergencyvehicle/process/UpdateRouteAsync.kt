@@ -10,9 +10,11 @@ class UpdateRouteAsync : AsyncTask<JSONObject, Void, String>() {
     private lateinit var onUpdateRouteListener: OnUpdateRouteListener;
 
     override fun doInBackground(vararg params: JSONObject?): String {
-
-        return httpConnectionUtil.requestPost("", params[0])
-
+        return httpConnectionUtil.requestGet(
+            EmerConstants.URL + EmerConstants.UPDATE_DIRECTION + "?direction=${params[0]!!.getInt(
+                "direction"
+            )}&id=${params[0]!!.getInt("id")}"
+        );
     }
 
     override fun onPostExecute(result: String?) {
