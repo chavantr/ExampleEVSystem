@@ -5,10 +5,13 @@ import android.annotation.SuppressLint
 import android.annotation.TargetApi
 import android.app.ProgressDialog
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.AsyncTask
 import android.os.Build
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
@@ -16,6 +19,10 @@ import android.os.Looper
 import android.support.annotation.RequiresApi
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.Toast
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationCallback
@@ -29,9 +36,17 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.mywings.emergencyvehicle.models.SignalPoints
 import com.mywings.emergencyvehicle.process.*
+import com.mywings.emergencyvehicle.routes.DirectionsJSONParser
+import com.mywings.emergencyvehicle.routes.JsonUtil
+import com.mywings.messmanagementsystem.routes.Constants
 import kotlinx.android.synthetic.main.activity_main.*
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.IOException
+import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.HashMap
 
 
 class MainActivity : AppCompatActivity(),
@@ -50,6 +65,15 @@ class MainActivity : AppCompatActivity(),
     private lateinit var marker: Marker
     private lateinit var circle: Circle
     private lateinit var progressDialogUtil: ProgressDialogUtil
+
+
+    private lateinit var jsonUtil: JsonUtil
+    private lateinit var nsource: String
+    private lateinit var ndest: String
+    private var destlat: Double = 0.0
+    private var destlng: Double = 0.0
+    private var srctlat: Double = 0.0
+    private var srclng: Double = 0.0
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,6 +106,8 @@ class MainActivity : AppCompatActivity(),
         imgRightRound.setOnClickListener {
 
         }
+
+        jsonUtil = JsonUtil()
     }
 
 
@@ -210,6 +236,25 @@ class MainActivity : AppCompatActivity(),
 
     }
 
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+
+        menuInflater.inflate(R.menu.dashboard, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                val intent = Intent(this@MainActivity, SelectHospitalActivity::class.java)
+                startActivityForResult(intent, 1001)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+
     override fun onPoints(result: JSONArray) {
         progressDialogUtil.hide()
         if (result.length() > 0) {
@@ -222,6 +267,7 @@ class MainActivity : AppCompatActivity(),
                     node.name = jNode.getString("Name")
                     node.lat = jNode.getString("Lat")
                     node.lng = jNode.getString("Lng")
+                    node.hid = jNode.getInt("HId")
                     lst.add(node)
                     mMap!!.addMarker(MarkerOptions().position(LatLng(node.lat.toDouble(), node.lng.toDouble()))).title =
                         "${node.name}"
@@ -270,6 +316,201 @@ class MainActivity : AppCompatActivity(),
         progressDialogUtil.show()
         val getPointAsync = GetPointAsync()
         getPointAsync.setOnPointListener(this)
+    }
+
+    // IMP
+
+    private var key = "&key=AIzaSyClCN7T0VPX7MIoOJEMA3W9JLXhV_S7yx4"
+
+    private fun getDirectionsUrl(origin: LatLng, dest: LatLng): String {
+        val strOrigin = ("origin=" + origin.latitude + ","
+                + origin.longitude)
+        val strDest = "destination=" + dest.latitude + "," + dest.longitude
+        val sensor = "sensor=false"
+
+        val parameters = "$strOrigin&$strDest&$sensor$key"
+        val output = "json"
+        return ("https://maps.googleapis.com/maps/api/directions/"
+                + output + "?" + parameters)
+    }
+
+    private inner class DownloadTask : AsyncTask<String, Void, String>() {
+
+        // Downloading data in non-ui thread
+        override fun doInBackground(vararg url: String): String {
+
+            // For storing data from web service
+            var data = ""
+
+            try {
+                // Fetching the data from web service
+                data = downloadUrl(url[0])
+            } catch (e: Exception) {
+                Log.d("Background Task", e.toString())
+
+            }
+
+            return data
+        }
+
+        // Executes in UI thread, after the execution of
+        // doInBackground()
+        override fun onPostExecute(result: String) {
+            super.onPostExecute(result)
+
+            val parserTask = ParserTask(mMap!!)
+
+            // Invokes the thread for parsing the JSON data
+            parserTask.execute(result)
+
+        }
+    }
+
+    /** A method to download json data from url  */
+    @Throws(IOException::class)
+    private fun downloadUrl(strUrl: String): String {
+        var data = ""
+        var iStream: InputStream? = null
+        var urlConnection: HttpURLConnection? = null
+        try {
+            val url = URL(strUrl)
+
+            // Creating an http connection to communicate with url
+            urlConnection = url.openConnection() as HttpURLConnection
+
+            // Connecting to url
+            urlConnection.connect()
+
+            iStream = urlConnection.inputStream
+
+            data = jsonUtil.convertStreamToString(iStream)
+
+        } catch (e: Exception) {
+
+        } finally {
+            iStream!!.close()
+            urlConnection!!.disconnect()
+        }
+        return data
+    }
+
+    /** A class to parse the Google Places in JSON format  */
+    private inner class ParserTask(internal var map: GoogleMap?) :
+        AsyncTask<String, Int, List<List<HashMap<String, String>>>>() {
+
+        // Parsing the data in non-ui thread
+        override fun doInBackground(
+            vararg jsonData: String
+        ): List<List<HashMap<String, String>>>? {
+
+            val jObject: JSONObject
+            var jArray: JSONArray
+            var routes: List<List<HashMap<String, String>>>? = null
+
+            try {
+                jObject = JSONObject(jsonData[0])
+                val parser = DirectionsJSONParser()
+                routes = parser.parse(jObject)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            return routes
+        }
+
+        // Executes in UI thread, after the parsing process
+        override fun onPostExecute(result: List<List<HashMap<String, String>>>) {
+
+            //progressDialogUtil.show()
+
+            var points: java.util.ArrayList<LatLng>? = null
+
+            var lineOptions: PolylineOptions? = null
+
+            // MarkerOptions markerOptions = new MarkerOptions();
+
+            // Traversing through all the routes
+            for (i in result.indices) {
+                points = java.util.ArrayList()
+                lineOptions = PolylineOptions()
+                // Fetching i-th route
+                val path = result[i]
+                // Fetching all the points in i-th route
+                for (j in path.indices) {
+                    // lineOptions = new PolylineOptions();
+                    val point = path[j]
+                    val lat = java.lang.Double.parseDouble(point[Constants.LAT]!!)
+                    val lng = java.lang.Double.parseDouble(point[Constants.LNG]!!)
+                    val position = LatLng(lat, lng)
+                    points.add(position)
+                }
+                // Adding all the points in the route to LineOptions
+                lineOptions.addAll(points)
+                lineOptions.width(9f)
+                lineOptions.color(Color.RED)
+            }
+
+            // Drawing polyline in the Google Map for the i-th route
+
+            //map!!.clear()
+
+            if (null != lineOptions) {
+                map!!.addPolyline(lineOptions)
+                setStartPosition(srctlat, srclng)
+                setDestPosition(destlat, destlng)
+                if (map != null) {
+                    fixZoom(lineOptions.points)
+                }
+
+                progressDialogUtil.hide()
+
+            } else {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Enable to draw routes, Please try again",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+
+        }
+    }
+
+    /**
+     * @param lat
+     * @param lng
+     */
+    private fun setStartPosition(lat: Double, lng: Double) {
+        var startmark = mMap!!.addMarker(
+            MarkerOptions()
+                .position(LatLng(lat, lng))
+                .title(nsource)
+                .snippet("")
+        )
+        startmark.tag = 1
+    }
+
+    /**
+     * @param lat
+     * @param lng
+     */
+    private fun setDestPosition(lat: Double, lng: Double) {
+        var destmark = mMap!!.addMarker(
+            MarkerOptions()
+                .position(LatLng(lat, lng))
+                .title(ndest)
+                .snippet("")
+        )
+
+        destmark.tag = 1
+    }
+
+
+    private fun fixZoom(points: List<LatLng>) {
+        val bc = LatLngBounds.Builder()
+        for (item in points) {
+            bc.include(item)
+        }
+        mMap!!.moveCamera(CameraUpdateFactory.newLatLngBounds(bc.build(), 90))
     }
 
 }
