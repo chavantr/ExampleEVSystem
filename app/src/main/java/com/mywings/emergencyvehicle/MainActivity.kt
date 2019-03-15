@@ -80,6 +80,12 @@ class MainActivity : AppCompatActivity(),
 
     private lateinit var timer: Timer
 
+    private lateinit var text: String
+
+    private var signal: String = ""
+
+    private var direction: String = ""
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,6 +101,11 @@ class MainActivity : AppCompatActivity(),
         imgForwad.setOnClickListener {
 
             if (flag) {
+                direction = "Straight"
+
+                text = "Signal:$signal/Direction:$direction"
+
+                lblName.text = text
                 initUpdateRoute(5)
             } else {
                 Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
@@ -104,7 +115,16 @@ class MainActivity : AppCompatActivity(),
 
         imgForwadRound.setOnClickListener {
             if (flag) {
+                //imgLeftRound.setImageResource(R.drawable.ic_traffic_black_24dp)
+                //imgForwadRound.setImageResource(R.drawable.ic_traffic_green_24dp)
+                //imgRightRound.setImageResource(R.drawable.ic_traffic_black_24dp)
+                signal = "Straight"
+
+                text = "Signal:$signal/Direction:$direction"
+
+                lblName.text = text
                 initUpdateLight(2)
+                //imgForwadRound.setImageDrawable(null)
             } else {
                 Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
             }
@@ -112,6 +132,13 @@ class MainActivity : AppCompatActivity(),
 
         imgLeft.setOnClickListener {
             if (flag) {
+
+                direction = "Left"
+
+                text = "Signal:$signal/Direction:$direction"
+
+                lblName.text = text
+
                 initUpdateRoute(4)
             } else {
                 Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
@@ -120,16 +147,26 @@ class MainActivity : AppCompatActivity(),
 
         imgLeftRound.setOnClickListener {
             if (flag) {
+                // imgLeftRound.setImageResource(R.drawable.ic_traffic_green_24dp)
+                //  imgForwadRound.setImageResource(R.drawable.ic_traffic_black_24dp)
+                //  imgRightRound.setImageResource(R.drawable.ic_traffic_black_24dp)
+                signal = "Left"
 
+                text = "Signal:$signal/Direction:$direction"
+
+                lblName.text = text
                 initUpdateLight(1)
-
-
             } else {
                 Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
             }
         }
         imgRight.setOnClickListener {
             if (flag) {
+                direction = "Right"
+
+                text = "Signal:$signal/Direction:$direction"
+
+                lblName.text = text
                 initUpdateRoute(6)
             } else {
                 Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
@@ -138,6 +175,17 @@ class MainActivity : AppCompatActivity(),
 
         imgRightRound.setOnClickListener {
             if (flag) {
+                //  imgLeftRound.setImageResource(R.drawable.ic_traffic_black_24dp)
+                //    imgForwadRound.setImageResource(R.drawable.ic_traffic_black_24dp)
+                //    imgRightRound.setImageResource(R.drawable.ic_traffic_green_24dp)
+
+                signal = "Right"
+
+
+                text = "Signal:$signal/Direction:$direction"
+
+                lblName.text = text
+
                 initUpdateLight(3)
             } else {
                 Toast.makeText(this@MainActivity, "Please select hospital to notify", Toast.LENGTH_LONG).show()
