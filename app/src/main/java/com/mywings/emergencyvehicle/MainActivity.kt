@@ -3,6 +3,7 @@ package com.mywings.emergencyvehicle
 import android.Manifest
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
+import android.app.Activity
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
@@ -35,6 +36,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.mywings.emergencyvehicle.models.SignalPoints
+import com.mywings.emergencyvehicle.models.UserInfoHolder
 import com.mywings.emergencyvehicle.process.*
 import com.mywings.emergencyvehicle.routes.DirectionsJSONParser
 import com.mywings.emergencyvehicle.routes.JsonUtil
@@ -273,6 +275,7 @@ class MainActivity : AppCompatActivity(),
                         "${node.name}"
                 }
             }
+            UserInfoHolder.getInstance().signalPoints = lst
         }
     }
 
@@ -286,6 +289,26 @@ class MainActivity : AppCompatActivity(),
 
     override fun onLocationUpdateSuccess(result: String) {
 
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (resultCode == RESULT_OK) {
+            if (requestCode == 1001) {
+
+                nsource = "Ambulance location"
+                ndest = UserInfoHolder.getInstance().hospital.name
+
+                val str = getDirectionsUrl(
+                    latLng,
+                    LatLng(
+                        UserInfoHolder.getInstance().hospital.lat.toDouble(),
+                        UserInfoHolder.getInstance().hospital.lng.toDouble()
+                    )
+                )
+                val downloadTask = DownloadTask()
+                downloadTask.execute(str)
+            }
+        }
     }
 
     private fun initUpdateLocation() {

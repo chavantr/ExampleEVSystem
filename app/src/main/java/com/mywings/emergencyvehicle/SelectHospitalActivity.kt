@@ -1,11 +1,14 @@
 package com.mywings.emergencyvehicle
 
+import android.app.Activity
+import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.v7.widget.LinearLayoutManager
 import com.mywings.emergencyvehicle.joint.HospitalAdapter
 import com.mywings.emergencyvehicle.joint.OnHospitalSelectListener
 import com.mywings.emergencyvehicle.models.Hospital
+import com.mywings.emergencyvehicle.models.UserInfoHolder
 import com.mywings.emergencyvehicle.process.GetHospitalAsync
 import com.mywings.emergencyvehicle.process.OnHospitalListener
 import com.mywings.emergencyvehicle.process.ProgressDialogUtil
@@ -43,6 +46,9 @@ class SelectHospitalActivity : AppCompatActivity(), OnHospitalSelectListener, On
     }
 
     override fun onHospitalSelected(selected: Hospital?) {
-
+        UserInfoHolder.getInstance().hospital = selected
+        val intent = Intent()
+        setResult(RESULT_OK, intent)
+        finish()
     }
 }
