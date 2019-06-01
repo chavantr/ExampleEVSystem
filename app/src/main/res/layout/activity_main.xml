@@ -24,7 +24,7 @@
 
 
         <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                   android:id="@+id/imgLeftRound"
+                   android:id="@+id/imgLeftRound" android:visibility="invisible"
                    android:layout_below="@id/imgForwad"
                    android:src="@drawable/ic_traffic_black_24dp" android:contentDescription="@string/left"/>
 
@@ -47,6 +47,7 @@
                    android:layout_height="wrap_content"
                    android:id="@+id/imgRightRound"
                    android:layout_below="@id/imgForwad"
+                   android:visibility="invisible"
                    android:layout_alignParentEnd="true"
                    android:src="@drawable/ic_traffic_black_24dp"
                    android:contentDescription="@string/right"/>

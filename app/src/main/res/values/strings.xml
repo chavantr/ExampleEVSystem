@@ -4,4 +4,7 @@
     <string name="left">Left</string>
     <string name="right">Right</string>
     <string name="search">Search</string>
+    <string name="enter_username">Enter username</string>
+    <string name="enter_password">Enter password</string>
+    <string name="sign_in">Sign In</string>
 </resources>
